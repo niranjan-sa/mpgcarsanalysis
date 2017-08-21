@@ -1,0 +1,128 @@
+---
+title: "MPG Analysis for Manual and Automatic cars"
+author: "Niranjan Agnihotri"
+date: "August 20, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(GGally)
+library(ggplot2)
+```
+
+## Executive Summary
+The following document uses the `mtcars` data set in order to study the effect of 
+transmission type of the car with the mpg of the car. 
+This analysis also tries to find out the effect of other variables over mpg performance 
+of the car. The data set is available in the R data sets.
+After analyzing we conclude that, the manual cars give better mpg than the automatic cars.
+
+The mpg of the manual cars is more by 7.244 units than the automatic cars.
+Thus manual cars can be said to be more efficient.  
+
+### Processing   
+Converting some numeric variables into factors for the sake of building models.
+```{r}
+df <- data.frame(mtcars)
+df$cyl <- as.factor(df$cyl)
+df$vs <- as.factor(df$vs)
+df$am <- as.factor(df$am)
+levels(df$am) <- c("Automatic", "Manual")
+df$gear <- as.factor(df$gear)
+df$carb <- as.factor(df$carb)
+```
+## Exploratory analysis
+To understand the correlation between the variables, we have Fig. 1 in the appendix.This shows us the interaction between all the variables within the dataset.
+The Fig. 2 in the appendix is the box whisker plot that shows the observed mpg values for
+automatic and manual variables.
+```{r}
+d <- aggregate(mpg ~ am, data = df, FUN = mean)
+```
+Here we quantify that the mpg for manual cars is more than the mpg for automatic cars.
+The difference is 
+```{r}
+print(abs(d[[2]][1]-d[[2]][2]))
+```
+### Fitting the model
+We consider that ther is no effect of am variable on the mpg. This is the null hypothesis.
+Let's build a model with the am variable only and examine the coefficients.
+```{r}
+fit0 <- lm(mpg ~ am, data = df)
+print(summary(fit0))
+```
+In the above model we try to gauge the meaning of coefficients.
+The intercept stands for the mean of the Automatic variant and if we add the intercept to amManual's coefficient, than we get the average of Manual variants.
+The t value for the automatic (intercept) and amManual are sufficiently away from zero.
+Thus we can conclude that the variable am has effect on the mpg of the cars.
+The F-statistic is also 16.86 which is large enough for rejecting the null hypothesis.
+
+The above model captures about 36% of the variance given by the R squared stastic.
+We try to incorporate more predictors in order to capture more variance in the model.
+
+## Building models 
+```{r}
+fit0 <- lm(mpg ~ am, data = df)
+fit1 <- lm(mpg ~ ., data = df)
+fit2 <- lm(mpg ~ am + wt, df)
+fit3 <- lm(mpg ~ am + cyl + disp + hp + wt, df)
+
+anova(fit0, fit1, fit2, fit3)
+```
+The model number 4 that we picked 
+has predictors who have the following co relations with mpg which are high
+
+am - 0.9  
+cyl -  -.852  
+disp -  -.848  
+hp -  -.776  
+wt -  -.868  
+
+These values are taken from the Appendix Fig. 1
+We can verify the same from the AIC score of each model below.
+
+### Uncertainity in the best model
+The confidence intervals for fit3 are as follows. The results will variy by the following
+variations in the coefficients.
+```{r}
+confint(fit3)
+```
+### Visualize a model
+We build a sample model (fit2) and visualize it. In appendix Figure 4 we visualize it.
+
+## AIC scores
+Aikaike Information Criterium
+A lower AIC implies a better model.
+```{r}
+print(AIC(fit0))
+print(AIC(fit1))
+print(AIC(fit2))
+print(AIC(fit3))
+```
+The mode mod3 has the lowest AIC and thus it's the best of models.
+
+## Appendix
+#### Fig 1
+To get insights about the interaction between different variables
+```{r fig.align='center', fig.height=14, fig.width=14}
+mtcars$cyl <- as.numeric(mtcars$cyl)
+ggpairs(mtcars)
+```
+
+#### Fig 2
+Box plot to find the mpg for automatic and manual cars
+```{r fig.align="center", fig.width=5, fig.height=4}
+boxplot(mpg ~ am, data = mtcars, names = c("Automatic", "Manual"))
+```
+#### Fig 4
+```{r fig.align="center", fig.height=4, fig.width=5}
+g <- ggplot(data = df, aes(wt, mpg, color=am))
+g + geom_point() + stat_smooth(method = "lm", col = "blue")
+```
+#### Fig 3
+```{r fig.align="center", fig.height=10, fig.width=10}
+par(mfrow=c(2,2))
+plot(fit3)
+```
